@@ -26,7 +26,7 @@ const App = () => {
   useEffect(() => {
     setInterval(() => {
       isGpsEnable();
-      devOptions();
+      // devOptions();
       dateTime();
     }, 1000);
   }, []);

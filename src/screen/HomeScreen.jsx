@@ -24,6 +24,8 @@ import LocationError from '../components/LocationError';
 import Geolocation from 'react-native-geolocation-service';
 //BIOMETRICS
 import ReactNativeBiometrics from 'react-native-biometrics';
+import {fetchAddress, openDatabase} from '../helper/database';
+import {currentLocation} from '../services/getLocation';
 
 //BIOMETRICS
 const Biometrics = new ReactNativeBiometrics();
@@ -45,6 +47,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
   useEffect(() => {
     requestPermission();
     watchCurrentLocation();
+    myLocation();
     const timer = setInterval(() => {
       checkConnectivity();
       dateTime();
@@ -55,9 +58,6 @@ const HomeScreen = ({setIsAuthenticated}) => {
     };
   }, []);
 
-  /*
-   * FUNCTIONS
-   */
   const requestPermission = async () => {
     if (Platform.OS === 'android') {
       const check = await PermissionsAndroid.check(
@@ -75,7 +75,6 @@ const HomeScreen = ({setIsAuthenticated}) => {
       }
     }
   };
-  const findLocation = async () => {};
 
   const dateTime = () => {
     const currentDate = new Date();
@@ -84,6 +83,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
     setCurrentDateTime(`${formattedDate} ${formattedTime}`);
   };
 
+  //FUNCTIONS
   const watchCurrentLocation = () => {
     const id = Geolocation.watchPosition(
       position => {
@@ -105,6 +105,20 @@ const HomeScreen = ({setIsAuthenticated}) => {
     setWatchId(id);
   };
 
+  const myLocation = async () => {
+    // await currentLocation('14.7418267', '120.9966633');
+    try {
+      const req = await fetch(
+        'http://nominatim.openstreetmap.org/reverse?lat=14.7418267&lon=120.9966633&format=json',
+      );
+      const data = await req.text();
+
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const backhandler = BackHandler.addEventListener('hardwareBackPress', e => {
     Alert.alert('Heyy', 'Are you sure you want to exit?', [
       {text: 'Cancel', onPress: () => null, style: 'cancel'},
@@ -113,14 +127,19 @@ const HomeScreen = ({setIsAuthenticated}) => {
     return true;
   });
   const checkConnectivity = async () => {
-    const req = await fetch('https://www.google.com');
-    if (req.ok) {
-      // console.log(req);
+    try {
+      const req = await fetch('https://www.google.com');
+      if (req.ok) {
+        // console.log(req);
 
-      setIsConnected(true);
+        setIsConnected(true);
+      }
+      setIsConnected(false);
+    } catch (error) {
+      setIsConnected(false);
     }
-    setIsConnected(false);
   };
+
   // const isValid = () => {
   //   const userLocation = [longitude, latitude];
   //   const geofenceCenter = [120.99674507047705, 14.741638157279192];
@@ -138,14 +157,14 @@ const HomeScreen = ({setIsAuthenticated}) => {
   //   }
   // };
 
+  //Refresh
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
 
     setRefreshing(false);
   }, []);
 
-  // FUNCTIONS
-
+  // Event Listeners
   const logout = () => {
     setIsAuthenticated(false);
   };
@@ -177,6 +196,11 @@ const HomeScreen = ({setIsAuthenticated}) => {
       .catch(err => {
         console.log(err);
       });
+  };
+
+  const checkOut = async () => {
+    // const db = await openDatabase();
+    await fetchAddress();
   };
   return (
     <>
@@ -230,6 +254,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
               icon="log-out-outline"
               color="#006341"
               textColor="#FFFFFF"
+              handleAction={checkOut}
             />
             <GButton
               title="Break In"
