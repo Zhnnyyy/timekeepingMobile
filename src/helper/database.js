@@ -2,7 +2,7 @@ import SQLite from 'react-native-sqlite-storage';
 import RNFS from 'react-native-fs';
 
 SQLite.enablePromise(true);
-const dbPath = `${RNFS.DocumentDirectoryPath}/addresses.db`;
+const dbPath = `${RNFS.DocumentDirectoryPath}/mobile_timekeeping.db`;
 
 export const openDatabase = async () => {
   const db = await SQLite.openDatabase({
@@ -32,4 +32,8 @@ export const fetchAddress = async () => {
   } catch (error) {
     console.log(error);
   }
+};
+
+export const removeDb = async () => {
+  await RNFS.unlink(dbPath);
 };

@@ -16,22 +16,30 @@ import {
 import React, {useState, useEffect} from 'react';
 import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
-const logo = require('../assets/lbrdc-logo-rnd.webp');
+// const logo = require('../assets/lbrdc-logo-rnd.webp');
+const logo = require('../assets/animatedLogo.gif');
 const {width, height} = Dimensions.get('window');
 
 //Components
 import InputText from '../components/InputText';
 import Button from '../components/Button';
 import Loader from '../components/Loader';
-const databaseFilePath = `${RNFS.DocumentDirectoryPath}/addresses.db`;
+
+//Services
+import {URL, executeRequest} from '../services/urls';
+
+const databaseFilePath = `${RNFS.DocumentDirectoryPath}/mobile_timekeeping.db`;
 const fileUrl =
-  'https://www.dropbox.com/scl/fi/hi6ccj976fcu3sjhpwf1c/addresses.db?rlkey=ypcstye9njd2u3da4le8dvbcy&st=tjk2anyl&dl=1';
+  'https://www.dropbox.com/scl/fi/8ev6f115s7igu7gulm600/mobile_timekeeping.db?rlkey=xfbttezo7m2eei61j02eo4icy&st=1hdi0m1z&dl=1';
 const LoginScreen = ({navigation, setIsAuthenticated}) => {
-  const [email, setEmail] = useState('');
+  const [idNumber, setIdNumber] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
-  const [isDownloading, setIsDownloading] = useState(false);
+  // const [isDownloading, setIsDownloading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadermsg, setloadermsg] = useState('Downloading...');
+
   // USEEFFECT
   useEffect(() => {
     init();
@@ -71,8 +79,41 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
       init();
       return;
     }
-    setIsAuthenticated(true);
-    // await RNFS.unlink(databaseFilePath);
+    if (!dbExist) {
+      return;
+    }
+
+    if (!idNumber || !password) {
+      Alert.alert('Warning', 'Please fill in all fields.');
+      return;
+    }
+
+    executeRequest(
+      URL().login,
+      'POST',
+      JSON.stringify({username: idNumber, password: password}),
+      res => {
+        setloadermsg('Loading...');
+        setLoading(true);
+        if (!res.loading) {
+          setLoading(false);
+          if (!res.error && !res.data.Error) {
+            //Login Success
+            // console.log(res.data);
+            console.log(res.data.data.Email);
+
+            if (res.data.data.Email.length === 0) {
+              navigation.navigate('EmailBox');
+              return;
+            }
+
+            setIsAuthenticated(true);
+          } else {
+            Alert.alert('Ooops!', res.data.msg);
+          }
+        }
+      },
+    );
   };
 
   const checkConnectivity = async () => {
@@ -91,17 +132,21 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
 
   const downloadDB = async () => {
     try {
-      setIsDownloading(true);
+      // setIsDownloading(true);
+      setloadermsg('Downloading...');
+      setLoading(true);
       const downloadResult = await RNFS.downloadFile({
         fromUrl: fileUrl,
         toFile: databaseFilePath,
       }).promise;
 
       if (downloadResult.statusCode === 200) {
-        setIsDownloading(false);
+        // setIsDownloading(false);
+        setLoading(false);
         Alert.alert('Success', 'Dataset downloaded successfully!');
       } else {
-        setIsDownloading(false);
+        // setIsDownloading(false);
+        setLoading(false);
         console.error(
           'Download failed with status code:',
           downloadResult.statusCode,
@@ -109,7 +154,8 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
         Alert.alert('Error', 'Download failed!');
       }
     } catch (error) {
-      setIsDownloading(false);
+      // setIsDownloading(false);
+      setLoading(false);
       console.error('Error downloading database:', error);
       Alert.alert('Error', 'Error downloading database!');
     }
@@ -118,7 +164,7 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle={'dark-content'} />
-      <Loader loading={isDownloading} />
+      <Loader loading={loading} message={loadermsg} />
       <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.container}>
         <View style={styles.logoContainer}>
           <Image style={styles.img} source={logo} />
@@ -126,8 +172,16 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
         </View>
         <View style={styles.card}>
           <Text style={styles.wctxt}>Welcome Back</Text>
-          <InputText placeholder={'Username'} />
-          <InputText placeholder={'Password'} />
+          <InputText
+            placeholder={'ID Number'}
+            value={idNumber}
+            onChange={value => setIdNumber(value)}
+          />
+          <InputText
+            placeholder={'Password'}
+            value={password}
+            onChange={value => setPassword(value)}
+          />
 
           <View style={styles.rememberForgotContainer}>
             <View style={styles.rememberMeContainer}>
@@ -168,8 +222,8 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   img: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
     alignSelf: 'center',
   },
   appTitle: {

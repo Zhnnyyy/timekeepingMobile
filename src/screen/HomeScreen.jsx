@@ -11,6 +11,7 @@ import {
   Alert,
   RefreshControl,
   PermissionsAndroid,
+  Linking,
 } from 'react-native';
 import React, {useState, useEffect} from 'react';
 import * as turf from '@turf/turf';
@@ -24,7 +25,7 @@ import LocationError from '../components/LocationError';
 import Geolocation from 'react-native-geolocation-service';
 //BIOMETRICS
 import ReactNativeBiometrics from 'react-native-biometrics';
-import {fetchAddress, openDatabase} from '../helper/database';
+import {fetchAddress, openDatabase, removeDb} from '../helper/database';
 import {currentLocation} from '../services/getLocation';
 
 //BIOMETRICS
@@ -47,7 +48,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
   useEffect(() => {
     requestPermission();
     watchCurrentLocation();
-    myLocation();
+    // myLocation();
     const timer = setInterval(() => {
       checkConnectivity();
       dateTime();
@@ -67,7 +68,10 @@ const HomeScreen = ({setIsAuthenticated}) => {
         const request = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         );
-        console.log(request);
+
+        if (request == 'never_ask_again') {
+          Linking.openSettings();
+        }
 
         if (request !== PermissionsAndroid.RESULTS.GRANTED) {
           requestPermission();
@@ -200,7 +204,8 @@ const HomeScreen = ({setIsAuthenticated}) => {
 
   const checkOut = async () => {
     // const db = await openDatabase();
-    await fetchAddress();
+    // await fetchAddress();
+    await removeDb();
   };
   return (
     <>

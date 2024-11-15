@@ -1,7 +1,7 @@
 import {StyleSheet, Text, TextInput, View} from 'react-native';
 import React from 'react';
 
-const InputText = ({placeholder}) => {
+const InputText = ({placeholder, onChange, value}) => {
   return (
     <View style={{width: '100%'}}>
       <TextInput
@@ -9,6 +9,9 @@ const InputText = ({placeholder}) => {
         placeholder={placeholder}
         placeholderTextColor="#999"
         autoCapitalize="none"
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry={placeholder === 'Password'}
       />
     </View>
   );
@@ -24,5 +27,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     fontSize: 16,
     marginBottom: 15,
+    color: 'black',
   },
 });
