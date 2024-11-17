@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import SQLite from 'react-native-sqlite-storage';
 import RNFS from 'react-native-fs';
 
@@ -32,6 +33,73 @@ export const fetchAddress = async () => {
   } catch (error) {
     console.log(error);
   }
+};
+
+export const syncAccount = async user => {
+  const db = await openDatabase();
+  try {
+    db.transaction(tx => {
+      tx.executeSql(
+        'DELETE FROM account',
+        [],
+        () => {
+          console.log('accounts deleted');
+          tx.executeSql(
+            'INSERT INTO account(accountId, employee, name, location, email, password) VALUES (?,?,?,?,?,?)',
+            [
+              user.accountID,
+              user.EmployeeID,
+              user.name,
+              user.LocationID,
+              user.Email,
+              user.Password,
+            ],
+            () => {
+              tx.executeSql(
+                'INSERT INTO location(name, latitude, longitude, radius) VALUES (?,?,?,?)',
+                [user.Location, user.latitude, user.longitude, user.radius],
+                () => {
+                  console.log('User synced successfully');
+                },
+                (tx, error) => {
+                  console.error('Error Inserting Location:', error);
+                  tx.rollback();
+                },
+              );
+            },
+            (tx, error) => {
+              console.error('Error inserting user:', error);
+              tx.rollback();
+            },
+          );
+        },
+        (tx, error) => {
+          console.error('Error deleting accounts:', error);
+          tx.rollback();
+        },
+      );
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const userDetails = async () => {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    db.transaction(tx => {
+      tx.executeSql(
+        'select * from account',
+        [],
+        (tx, result) => {
+          resolve(result.rows.item(0));
+        },
+        (tx, error) => {
+          reject(error);
+        },
+      );
+    });
+  });
 };
 
 export const removeDb = async () => {

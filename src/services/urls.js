@@ -1,7 +1,19 @@
+/* eslint-disable prettier/prettier */
+// export function URL() {
+//   return {
+//     login: 'http://192.168.0.49:3002/query/mobile/login.php',
+//     otp: 'http://192.168.0.49:3002/query/mobile/mail/mail.php',
+//     updateEmail: 'http://192.168.0.49:3002/query/mobile/updateEmail.php',
+//     updatePassword: 'http://192.168.0.49:3002/query/mobile/updatePassword.php',
+//   };
+// }
+
 export function URL() {
   return {
-    login: 'http://192.168.0.49:3002/query/mobile/login.php',
-    otp: 'http://192.168.0.49:3002/query/mobile/mail/mail.php',
+    login: 'http://192.168.1.5:3002/query/mobile/login.php',
+    otp: 'http://192.168.1.5:3002/query/mobile/mail/mail.php',
+    updateEmail: 'http://192.168.1.5:3002/query/mobile/updateEmail.php',
+    updatePassword: 'http://192.168.1.5:3002/query/mobile/updatePassword.php',
   };
 }
 

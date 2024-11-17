@@ -24,14 +24,23 @@ const {width, height} = Dimensions.get('window');
 import InputText from '../components/InputText';
 import Button from '../components/Button';
 import Loader from '../components/Loader';
+import CTextInput from '../components/CTextInput';
 
 //Services
 import {URL, executeRequest} from '../services/urls';
 
+//Helper
+import {syncAccount} from '../helper/database';
+
 const databaseFilePath = `${RNFS.DocumentDirectoryPath}/mobile_timekeeping.db`;
 const fileUrl =
   'https://www.dropbox.com/scl/fi/8ev6f115s7igu7gulm600/mobile_timekeeping.db?rlkey=xfbttezo7m2eei61j02eo4icy&st=1hdi0m1z&dl=1';
-const LoginScreen = ({navigation, setIsAuthenticated}) => {
+const LoginScreen = ({
+  navigation,
+  setIsAuthenticated,
+  setAccountID,
+  setAccPassword,
+}) => {
   const [idNumber, setIdNumber] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -39,6 +48,7 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
   // const [isDownloading, setIsDownloading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadermsg, setloadermsg] = useState('Downloading...');
+  const [showPassword, setShowPassword] = useState(false);
 
   // USEEFFECT
   useEffect(() => {
@@ -92,7 +102,7 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
       URL().login,
       'POST',
       JSON.stringify({username: idNumber, password: password}),
-      res => {
+      async res => {
         setloadermsg('Loading...');
         setLoading(true);
         if (!res.loading) {
@@ -100,13 +110,18 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
           if (!res.error && !res.data.Error) {
             //Login Success
             // console.log(res.data);
-            console.log(res.data.data.Email);
-
+            setAccountID(res.data.data.accountID);
+            setAccPassword(res.data.data.Password);
             if (res.data.data.Email.length === 0) {
               navigation.navigate('EmailBox');
               return;
             }
-
+            if (res.data.data.Password == 'LBRDC') {
+              navigation.navigate('ChangePassword');
+              return;
+            }
+            console.log(res.data.data);
+            await syncAccount(res.data.data);
             setIsAuthenticated(true);
           } else {
             Alert.alert('Ooops!', res.data.msg);
@@ -172,7 +187,7 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
         </View>
         <View style={styles.card}>
           <Text style={styles.wctxt}>Welcome Back</Text>
-          <InputText
+          {/* <InputText
             placeholder={'ID Number'}
             value={idNumber}
             onChange={value => setIdNumber(value)}
@@ -181,6 +196,24 @@ const LoginScreen = ({navigation, setIsAuthenticated}) => {
             placeholder={'Password'}
             value={password}
             onChange={value => setPassword(value)}
+          /> */}
+          <CTextInput
+            ispw={false}
+            placeholder="Employee ID"
+            value={idNumber}
+            onChangeText={setIdNumber}
+            secureTxt={false}
+            leftIcon="person-circle-outline"
+          />
+          <CTextInput
+            ispw={true}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            leftIcon="lock-closed-outline"
+            showPassword={showPassword}
+            secureTxt={!showPassword}
+            setShowPassword={setShowPassword}
           />
 
           <View style={styles.rememberForgotContainer}>

@@ -11,12 +11,19 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-export default function EmailAddForm() {
+//Components
+import Loader from '../components/Loader';
+
+//Services
+import {URL, executeRequest} from '../services/urls';
+export default function EmailAddForm({navigation, accountID, password}) {
   const [email, setEmail] = useState('');
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [otp, setOtp] = useState('');
   const [isOtpSent, setIsOtpSent] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [loadermsg, setloadermsg] = useState('Downloading...');
+  const [gencode, setCode] = useState('');
   const validateEmail = text => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(text);
@@ -29,9 +36,21 @@ export default function EmailAddForm() {
 
   const handleSendOtp = () => {
     if (isEmailValid && email.length > 0) {
-      // Here you would typically send an OTP to the provided email
-      Alert.alert('OTP Sent', `An OTP has been sent to ${email}`);
-      setIsOtpSent(true);
+      const code = Math.floor(100000 + Math.random() * 900000);
+      setCode(code);
+      const data = {email: email, subject: 'OTP Verification', otp: code};
+      executeRequest(URL().otp, 'POST', JSON.stringify(data), res => {
+        setloadermsg('Sending OTP...');
+        setLoading(true);
+        if (!res.loading) {
+          setLoading(false);
+          if (!res.data[0].Error) {
+            setIsOtpSent(true);
+          } else {
+            Alert.alert('Error', res.data[0].msg);
+          }
+        }
+      });
     } else {
       Alert.alert('Error', 'Please enter a valid email address.');
     }
@@ -39,11 +58,32 @@ export default function EmailAddForm() {
 
   const handleSubmit = () => {
     if (isEmailValid && email.length > 0 && otp.length > 0) {
-      // Here you would typically verify the OTP and add the email
-      Alert.alert(
-        'Success',
-        `Email ${email} has been verified and added successfully!`,
-      );
+      if (gencode == otp) {
+        executeRequest(
+          URL().updateEmail,
+          'POST',
+          JSON.stringify({accountID: accountID, email: email}),
+          res => {
+            setloadermsg('Updating email...');
+            setLoading(true);
+            if (!res.loading) {
+              setLoading(false);
+              if (!res.data.Error) {
+                if (password == 'LBRDC') {
+                  navigation.navigate('ChangePassword');
+                } else {
+                  navigation.navigate('Login');
+                }
+              } else {
+                Alert.alert('Error', res.data.msg);
+              }
+            }
+          },
+        );
+      } else {
+        Alert.alert('Warning', "OTP doesn't match");
+      }
+      return;
       setEmail('');
       setOtp('');
       setIsOtpSent(false);
@@ -56,6 +96,7 @@ export default function EmailAddForm() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
+      <Loader loading={loading} message={loadermsg} />
       <View style={styles.form}>
         <Text style={styles.title}>Add Email Address</Text>
         <View style={styles.inputContainer}>
@@ -88,7 +129,9 @@ export default function EmailAddForm() {
           ]}
           onPress={handleSendOtp}
           disabled={!isEmailValid || email.length === 0}>
-          <Text style={styles.buttonText}>Send OTP</Text>
+          <Text style={styles.buttonText}>
+            {isOtpSent ? 'Resend OTP' : 'Send OTP'}
+          </Text>
         </TouchableOpacity>
 
         {isOtpSent && (

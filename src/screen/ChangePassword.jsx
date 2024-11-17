@@ -13,23 +13,31 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import CTextInput from '../components/CTextInput';
 
-export default function PasswordChangeForm() {
-  const [currentPassword, setCurrentPassword] = useState('');
+//Components
+import Loader from '../components/Loader';
+
+//Services
+import {URL, executeRequest} from '../services/urls';
+
+export default function PasswordChangeForm({navigation, password, accountID}) {
+  const [currentPassword, setCurrentPassword] = useState();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [loadermsg, setloadermsg] = useState('Downloading...');
   const validatePassword = password => {
     const regex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
     return regex.test(password);
   };
 
   const handleSubmit = () => {
-    if (!currentPassword) {
-      Alert.alert('Error', 'Please enter your current password.');
+    if (currentPassword != password) {
+      Alert.alert('Error', 'Incorrect current password');
       return;
     }
     if (!validatePassword(newPassword)) {
@@ -43,80 +51,68 @@ export default function PasswordChangeForm() {
       Alert.alert('Error', 'New passwords do not match.');
       return;
     }
-    Alert.alert('Success', 'Your password has been changed successfully!');
+    executeRequest(
+      URL().updatePassword,
+      'POST',
+      JSON.stringify({accountID: accountID, password: newPassword}),
+      res => {
+        setloadermsg('Changing password...');
+        setLoading(true);
+        if (!res.loading) {
+          setLoading(false);
+          if (!res.data.Error) {
+            navigation.navigate('Login');
+          } else {
+            Alert.alert('Error', res.data.msg);
+          }
+        }
+      },
+    );
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
   };
 
-  const PasswordInput = ({
-    value,
-    onChangeText,
-    placeholder,
-    secureTextEntry,
-    showPassword,
-    setShowPassword,
-  }) => (
-    <View style={styles.inputContainer}>
-      <Icon
-        name="lock-closed-outline"
-        size={24}
-        color="#006341"
-        style={styles.icon}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={!showPassword}
-      />
-      <TouchableOpacity
-        onPress={() => setShowPassword(!showPassword)}
-        style={styles.eyeIcon}>
-        <Icon
-          name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-          size={24}
-          color="#006341"
-        />
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
+      <Loader loading={loading} message={loadermsg} />
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.form}>
           <Text style={styles.title}>Change Password</Text>
 
-          <PasswordInput
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
+          <CTextInput
             placeholder="Current Password"
-            secureTextEntry={!showCurrentPassword}
-            showPassword={showCurrentPassword}
+            onChangeText={setCurrentPassword}
+            value={currentPassword}
+            secureTxt={!showCurrentPassword}
             setShowPassword={setShowCurrentPassword}
+            showPassword={showCurrentPassword}
+            leftIcon="lock-closed-outline"
+            ispw={true}
           />
 
-          <PasswordInput
-            value={newPassword}
-            onChangeText={setNewPassword}
+          <CTextInput
             placeholder="New Password"
-            secureTextEntry={!showNewPassword}
-            showPassword={showNewPassword}
+            onChangeText={setNewPassword}
+            value={newPassword}
+            secureTxt={!showNewPassword}
             setShowPassword={setShowNewPassword}
+            showPassword={showNewPassword}
+            leftIcon="lock-closed-outline"
+            ispw={true}
           />
 
-          <PasswordInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
+          <CTextInput
             placeholder="Confirm New Password"
-            secureTextEntry={!showConfirmPassword}
-            showPassword={showConfirmPassword}
+            onChangeText={setConfirmPassword}
+            value={confirmPassword}
+            secureTxt={!showConfirmPassword}
             setShowPassword={setShowConfirmPassword}
+            showPassword={showConfirmPassword}
+            leftIcon="lock-closed-outline"
+            ispw={true}
           />
 
           <Text style={styles.passwordRequirements}>
@@ -127,11 +123,17 @@ export default function PasswordChangeForm() {
           <TouchableOpacity
             style={[
               styles.button,
-              (!currentPassword || !newPassword || !confirmPassword) &&
-                styles.buttonDisabled,
+              !currentPassword || !newPassword || !confirmPassword
+                ? styles.buttonDisabled
+                : newPassword == confirmPassword
+                ? styles.button
+                : styles.buttonDisabled,
             ]}
             onPress={handleSubmit}
-            disabled={!currentPassword || !newPassword || !confirmPassword}>
+            disabled={
+              (!currentPassword || !newPassword || !confirmPassword) &&
+              newPassword == confirmPassword
+            }>
             <Text style={styles.buttonText}>Change Password</Text>
           </TouchableOpacity>
         </View>
@@ -166,26 +168,6 @@ const styles = StyleSheet.create({
     color: '#006341',
     marginBottom: 20,
     textAlign: 'center',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#006341',
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  icon: {
-    padding: 10,
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: '#333',
-  },
-  eyeIcon: {
-    padding: 10,
   },
   passwordRequirements: {
     fontSize: 12,

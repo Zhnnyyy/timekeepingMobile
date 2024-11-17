@@ -25,8 +25,11 @@ import LocationError from '../components/LocationError';
 import Geolocation from 'react-native-geolocation-service';
 //BIOMETRICS
 import ReactNativeBiometrics from 'react-native-biometrics';
-import {fetchAddress, openDatabase, removeDb} from '../helper/database';
+import {removeDb} from '../helper/database';
 import {currentLocation} from '../services/getLocation';
+
+//Helper
+import {userDetails} from '../helper/database';
 
 //BIOMETRICS
 const Biometrics = new ReactNativeBiometrics();
@@ -34,12 +37,15 @@ const HomeScreen = ({setIsAuthenticated}) => {
   const [currentDateTime, setCurrentDateTime] = useState('Loading time...');
   const [location, setLocation] = useState('Loading location...');
   const [lastAction, setLastAction] = useState('No recent action');
-  const [status, setStatus] = useState('Checked Out');
+  const [status, setStatus] = useState('');
   const [isConnected, setIsConnected] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [watchId, setWatchId] = useState(null);
   const [coordinates, setCoordinates] = useState();
-
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [name, setName] = useState();
+  const [idNumber, setIdNumber] = useState();
   /*
    * USE EFFECT
    */
@@ -47,6 +53,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
   //Check Location Permission
   useEffect(() => {
     requestPermission();
+    loadDetails();
     watchCurrentLocation();
     // myLocation();
     const timer = setInterval(() => {
@@ -81,10 +88,21 @@ const HomeScreen = ({setIsAuthenticated}) => {
   };
 
   const dateTime = () => {
+    const weekdays = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ];
     const currentDate = new Date();
+    const currentDay = weekdays[currentDate.getDay()];
     const formattedDate = currentDate.toLocaleDateString();
     const formattedTime = currentDate.toLocaleTimeString();
     setCurrentDateTime(`${formattedDate} ${formattedTime}`);
+    setStatus(currentDay);
   };
 
   //FUNCTIONS
@@ -93,6 +111,8 @@ const HomeScreen = ({setIsAuthenticated}) => {
       position => {
         const {latitude, longitude} = position.coords;
         const str = `${latitude},${longitude}`;
+        setLatitude(latitude);
+        setLongitude(longitude);
         setCoordinates(str);
       },
       error => {
@@ -109,20 +129,6 @@ const HomeScreen = ({setIsAuthenticated}) => {
     setWatchId(id);
   };
 
-  const myLocation = async () => {
-    // await currentLocation('14.7418267', '120.9966633');
-    try {
-      const req = await fetch(
-        'http://nominatim.openstreetmap.org/reverse?lat=14.7418267&lon=120.9966633&format=json',
-      );
-      const data = await req.text();
-
-      console.log(data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   const backhandler = BackHandler.addEventListener('hardwareBackPress', e => {
     Alert.alert('Heyy', 'Are you sure you want to exit?', [
       {text: 'Cancel', onPress: () => null, style: 'cancel'},
@@ -134,11 +140,8 @@ const HomeScreen = ({setIsAuthenticated}) => {
     try {
       const req = await fetch('https://www.google.com');
       if (req.ok) {
-        // console.log(req);
-
         setIsConnected(true);
       }
-      setIsConnected(false);
     } catch (error) {
       setIsConnected(false);
     }
@@ -173,12 +176,6 @@ const HomeScreen = ({setIsAuthenticated}) => {
     setIsAuthenticated(false);
   };
   const checkIn = async () => {
-    // if (__DEV__) {
-    //   Alert.alert('Developer Options', 'Developer options are enabled.');
-    // } else {
-    //   Alert.alert('Developer Options', 'Developer options are not enabled.');
-    // }
-
     Biometrics.isSensorAvailable()
       .then(result => {
         const {available, biometryType} = result;
@@ -202,6 +199,20 @@ const HomeScreen = ({setIsAuthenticated}) => {
       });
   };
 
+  const loadDetails = async () => {
+    const details = await userDetails();
+    setName(details.name);
+    setIdNumber(details.employee);
+  };
+
+  const OTIN = async () => {
+    // const loc = await currentLocation(latitude, longitude);
+    // console.log(loc);
+    console.log('fetching...');
+
+    await currentLocation(latitude, longitude);
+  };
+
   const checkOut = async () => {
     // const db = await openDatabase();
     // await fetchAddress();
@@ -212,8 +223,8 @@ const HomeScreen = ({setIsAuthenticated}) => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>Ed Emmanuel Perpetua</Text>
-            <Text style={styles.employeeId}>ID: 0032424</Text>
+            <Text style={styles.userName}>{name}</Text>
+            <Text style={styles.employeeId}>ID: {idNumber}</Text>
           </View>
           <TouchableOpacity onPress={logout}>
             <Icon name="log-out-outline" size={30} color="#fff" />
@@ -282,6 +293,7 @@ const HomeScreen = ({setIsAuthenticated}) => {
               icon="time-outline"
               color="#FDB913"
               textColor="#006341"
+              handleAction={OTIN}
             />
             <GButton
               title="Overtime Out"
